@@ -10,16 +10,6 @@ import re
 from typing import List, Union
 import base64 # For image encoding
 
-
-@llm.hookimpl
-def register_commands(cli):
-    return
-    # @cli.command()
-    # def hello_world():
-    #     "Say hello world"
-    #     click.echo("Hello world!")
-
-
 @llm.hookimpl
 def register_fragment_loaders(register):
     register("arxiv", arxiv_loader)
