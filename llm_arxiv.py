@@ -7,7 +7,7 @@ import fitz  # PyMuPDF
 import tempfile
 import os
 import re
-from typing import List
+from typing import List, Union
 import base64 # For image encoding
 
 
@@ -25,7 +25,7 @@ def register_fragment_loaders(register):
     register("arxiv", arxiv_loader)
 
 
-def extract_arxiv_id(argument: str) -> str | None:
+def extract_arxiv_id(argument: str) -> Union[str, None]:
     """Extracts arXiv ID from URL or returns the argument if it looks like an ID."""
     # Check for URL pattern: https://arxiv.org/abs/xxxx.xxxxx or /pdf/xxxx.xxxxx.pdf
     # Allows for optional 'v' followed by digits for versions
