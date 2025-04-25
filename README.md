@@ -5,7 +5,7 @@
 [![Tests](https://github.com/agustif/llm-arxiv/actions/workflows/test.yml/badge.svg)](https://github.com/agustif/llm-arxiv/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/agustif/llm-arxiv/blob/main/LICENSE)
 
-LLM plugin for loading arXiv paper text content using the `arxiv` API and PyMuPDF.
+LLM plugin for loading arXiv paper text and images content using the `arxiv` API and PyMuPDF.
 
 ## Installation
 
@@ -19,7 +19,8 @@ This plugin requires the `arxiv` and `PyMuPDF` packages.
 
 ## Usage
 
-This plugin adds support for the `arxiv:` fragment prefix. You can use it to load the full text and images content of a paper from its arXiv ID or URL.
+This plugin adds support for the `arxiv:` fragment prefix. 
+You can use it to load from its arXiv ID or URL.
 
 ```bash
 # Load by arXiv ID
