@@ -23,19 +23,13 @@ This plugin adds support for the `arxiv:` fragment prefix. You can use it to loa
 
 ```bash
 # Load by ID (new format)
-llm fragment arxiv:2310.06825
+llm -f arxiv:2310.06825
 
 # Load by ID (old format)
-llm fragment arxiv:hep-th/0101001
+llm -f arxiv:hep-th/0101001
 
 # Load by URL
-llm fragment arxiv:https://arxiv.org/abs/2310.06825
-```
-
-You can pipe the output to LLM commands:
-
-```bash
-llm -f arxiv:2310.06825 -m claude-3-haiku "Summarize this paper"
+llm -f arxiv:https://arxiv.org/abs/2310.06825
 ```
 
 ## Development
