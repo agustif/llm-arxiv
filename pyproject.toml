@@ -1,0 +1,31 @@
+[project]
+name = "llm-arxiv"
+version = "0.1"
+description = "LLM plugin for loading arXiv papers"
+readme = "README.md"
+authors = [{name = "Agusti F."}]
+license = {text = "Apache-2.0"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License"
+]
+dependencies = [
+    "llm",
+    "arxiv",
+    "PyMuPDF"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/agustif/llm-arxiv"
+Changelog = "https://github.com/agustif/llm-arxiv/releases"
+Issues = "https://github.com/agustif/llm-arxiv/issues"
+CI = "https://github.com/agustif/llm-arxiv/actions"
+
+[project.entry-points.llm]
+arxiv = "llm_arxiv"
+
+[project.optional-dependencies]
+test = ["pytest"]
