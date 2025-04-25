@@ -19,7 +19,7 @@ This plugin requires the `arxiv` and `PyMuPDF` packages.
 
 ## Usage
 
-This plugin adds support for the `arxiv:` fragment prefix. You can use it to load the full text content of a paper from its arXiv ID or URL.
+This plugin adds support for the `arxiv:` fragment prefix. You can use it to load the full text and images content of a paper from its arXiv ID or URL.
 
 ```bash
 # Load by arXiv ID
