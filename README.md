@@ -22,13 +22,10 @@ This plugin requires the `arxiv` and `PyMuPDF` packages.
 This plugin adds support for the `arxiv:` fragment prefix. You can use it to load the full text content of a paper from its arXiv ID or URL.
 
 ```bash
-# Load by ID (new format)
+# Load by arXiv ID
 llm -f arxiv:2310.06825
 
-# Load by ID (old format)
-llm -f arxiv:hep-th/0101001
-
-# Load by URL
+# Load by full URL
 llm -f arxiv:https://arxiv.org/abs/2310.06825
 ```
 
