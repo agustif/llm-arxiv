@@ -1,11 +1,9 @@
-import click
 import llm
 import arxiv
 # Keep specific import for this one as it seemed to work
 from arxiv import UnexpectedEmptyPageError, HTTPError
 import fitz  # PyMuPDF
 import tempfile
-import os
 import re
 from typing import List, Union
 import base64 # For image encoding
@@ -70,31 +68,40 @@ def arxiv_loader(argument: str) -> List[Union[llm.Fragment, llm.Attachment]]:
         with tempfile.TemporaryDirectory() as temp_dir:
             pdf_path = paper.download_pdf(dirpath=temp_dir)
             try:
-                doc = fitz.open(pdf_path)
-                for page_num, page in enumerate(doc):
-                    # 1. Extract text for the current page
-                    page_text = page.get_text()
-                    full_text_parts.append(page_text)
-                    
-                    # 2. Extract images and create image fragments + placeholders
-                    image_list = page.get_images(full=True)
-                    page_image_placeholders = []
-                    for img_index, img_info in enumerate(image_list):
-                        xref = img_info[0]
-                        try:
-                            base_image = doc.extract_image(xref)
-                        except Exception:
-                            # Ignore images that cannot be extracted
-                            continue 
-                        img_base64 = base64.b64encode(image_bytes).decode("utf-8")
-                        placeholder = f"See attached image {attachment_counter}"
-                        full_text_parts.append(f"\n{placeholder}\n")
-                        image_attachments.append(
-                            llm.Attachment(img_base64, source=placeholder)
-                        )
-                        attachment_counter += 1
+                with fitz.open(pdf_path) as doc:
+                    for page_num, page in enumerate(doc):
+                        # 1. Extract text for the current page
+                        page_text = page.get_text()
+                        full_text_parts.append(page_text)
+
+                        # 2. Extract images and create image fragments + placeholders
+                        image_list = page.get_images(full=True)
+                        page_image_placeholders = []
+                        for img_index, img_info in enumerate(image_list):
+                            xref = img_info[0]
+                            try:
+                                base_image = doc.extract_image(xref)
+                            except Exception:
+                                #assert False, "DEBUG: Exception caught in image extraction loop"
+                                # Ignore images that cannot be extracted
+                                continue
+                            image_bytes = base_image["image"]
+                            image_ext = base_image["ext"]
+                            img_base64 = base64.b64encode(image_bytes).decode('utf-8')
+
+                            # Generate source URL for both placeholder and fragment
+                            img_source = f"{paper_source_url}/page_{page_num + 1}_img_{img_index + 1}.{image_ext}"
+
+                            # Add placeholder to list for this page
+                            page_image_placeholders.append(f"\n[IMAGE: {img_source}]\n")
+
+                            # Add image fragment to the main list
+                            image_attachments.append(llm.Fragment(img_base64, source=img_source))
+
+                        # 3. Append placeholders to the text collected for this page
+                        if page_image_placeholders:
+                            full_text_parts.append("".join(page_image_placeholders))
                         
-                doc.close()
             except Exception as e:
                 if 'doc' in locals() and doc.is_open:
                     doc.close()

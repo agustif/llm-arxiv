@@ -1,4 +1,3 @@
-from llm.plugins import pm
 import pytest
 from llm_arxiv import extract_arxiv_id, arxiv_loader
 from unittest.mock import patch, MagicMock
@@ -51,36 +50,46 @@ def test_arxiv_loader_success(mock_search_class, mock_fitz_open):
     mock_page1 = MagicMock()
     mock_page1.get_text.return_value = "This is page 1. "
     # Provide one image on page 1
-    mock_page1.get_images.return_value = [(10,)]
+    mock_page1.get_images.return_value = [(10,)] # (xref,)
     mock_page2 = MagicMock()
     mock_page2.get_text.return_value = "This is page 2."
     mock_page2.get_images.return_value = []
     mock_doc.__iter__.return_value = iter([mock_page1, mock_page2])
-    mock_fitz_open.return_value.__enter__.return_value = mock_doc
-    # Also mock the direct return value if not using context manager (though we are)
-    mock_fitz_open.return_value = mock_doc 
+    # Mock the extract_image call
+    mock_doc.extract_image.return_value = {"image": b"fake_image_bytes", "ext": "png"}
+    # Configure mock_doc to be a context manager returning itself
+    mock_doc.__enter__.return_value = mock_doc
+    
+    # Ensure __exit__ calls close() and returns None
+    def mock_exit_calls_close(*args):
+        mock_doc.close() # Call the close method on mock_doc
+        return None
+    mock_doc.__exit__.side_effect = mock_exit_calls_close
+
+    # mock_fitz_open should return mock_doc
+    mock_fitz_open.return_value = mock_doc
 
     # --- Call the loader ---
     fragments = arxiv_loader("1234.5678")
 
     # --- Assertions ---
     assert isinstance(fragments, list)
-    assert len(fragments) >= 2 # Should have at least the text fragment
+    assert len(fragments) == 2 # Text fragment + 1 image attachment
     
     # Check the first fragment (text)
     text_fragment = fragments[0]
     assert isinstance(text_fragment, llm.Fragment)
     assert text_fragment.source == "http://arxiv.org/abs/1234.5678v1"
-    assert (
-        str(text_fragment)
-        == "This is page 1. \nSee attached image 1\nThis is page 2."
-    )
+    # Expected img_source: "http://arxiv.org/abs/1234.5678v1/page_1_img_1.png"
+    expected_text = "This is page 1. \n[IMAGE: http://arxiv.org/abs/1234.5678v1/page_1_img_1.png]\nThis is page 2."
+    actual_text = str(text_fragment)
+    assert actual_text == expected_text
 
     # Check the attachment
     attachment = fragments[1]
-    assert isinstance(attachment, llm.Attachment)
-    assert attachment.source == "See attached image 1"
-    assert attachment.content == base64.b64encode(b"imgdata").decode("utf-8")
+    assert isinstance(attachment, llm.Fragment) # Should be llm.Fragment based on llm_arxiv.py
+    assert attachment.source == "http://arxiv.org/abs/1234.5678v1/page_1_img_1.png"
+    assert str(attachment) == base64.b64encode(b"fake_image_bytes").decode("utf-8")
 
     # Check mocks were called correctly
     mock_search_class.assert_called_once_with(id_list=["1234.5678"], max_results=1)
@@ -92,6 +101,8 @@ def test_arxiv_loader_success(mock_search_class, mock_fitz_open):
     # Check that get_images was called for each page
     assert mock_page1.get_images.call_count == 1
     assert mock_page2.get_images.call_count == 1
+    # Ensure doc.extract_image was called for the image on page 1
+    mock_doc.extract_image.assert_called_once_with(10)
     # Ensure doc.close() was called
     mock_doc.close.assert_called_once()
 
