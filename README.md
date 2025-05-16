@@ -29,6 +29,9 @@ llm -f arxiv:2310.06825
 # Load by full URL
 llm -f arxiv:https://arxiv.org/abs/2310.06825
 ```
+When the paper contains images, placeholders like ``See attached image 1`` are
+inserted into the text and the image data is returned as attachments.
+
 
 ## Development
 

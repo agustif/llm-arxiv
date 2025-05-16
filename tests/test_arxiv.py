@@ -3,7 +3,8 @@ import pytest
 from llm_arxiv import extract_arxiv_id, arxiv_loader
 from unittest.mock import patch, MagicMock
 import llm
-import arxiv # Import arxiv itself for exception types
+import arxiv
+import base64
 
 
 @pytest.mark.parametrize(
@@ -49,8 +50,8 @@ def test_arxiv_loader_success(mock_search_class, mock_fitz_open):
     mock_doc = MagicMock()
     mock_page1 = MagicMock()
     mock_page1.get_text.return_value = "This is page 1. "
-    # Mock get_images to return an empty list for simplicity in this test
-    mock_page1.get_images.return_value = [] 
+    # Provide one image on page 1
+    mock_page1.get_images.return_value = [(10,)]
     mock_page2 = MagicMock()
     mock_page2.get_text.return_value = "This is page 2."
     mock_page2.get_images.return_value = []
@@ -64,13 +65,22 @@ def test_arxiv_loader_success(mock_search_class, mock_fitz_open):
 
     # --- Assertions ---
     assert isinstance(fragments, list)
-    assert len(fragments) >= 1 # Should have at least the text fragment
+    assert len(fragments) >= 2 # Should have at least the text fragment
     
     # Check the first fragment (text)
     text_fragment = fragments[0]
     assert isinstance(text_fragment, llm.Fragment)
     assert text_fragment.source == "http://arxiv.org/abs/1234.5678v1"
-    assert str(text_fragment) == "This is page 1. This is page 2."
+    assert (
+        str(text_fragment)
+        == "This is page 1. \nSee attached image 1\nThis is page 2."
+    )
+
+    # Check the attachment
+    attachment = fragments[1]
+    assert isinstance(attachment, llm.Attachment)
+    assert attachment.source == "See attached image 1"
+    assert attachment.content == base64.b64encode(b"imgdata").decode("utf-8")
 
     # Check mocks were called correctly
     mock_search_class.assert_called_once_with(id_list=["1234.5678"], max_results=1)

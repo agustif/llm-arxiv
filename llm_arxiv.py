@@ -36,12 +36,14 @@ def extract_arxiv_id(argument: str) -> Union[str, None]:
     return None
 
 
-def arxiv_loader(argument: str) -> List[llm.Fragment]:
+def arxiv_loader(argument: str) -> List[Union[llm.Fragment, llm.Attachment]]:
     """
     Load text and images from an arXiv paper PDF.
 
-    Returns a list of fragments: first is text, subsequent are base64 images.
-    Text fragment contains placeholders like [IMAGE: source_url] for images found on each page.
+    Returns a list starting with a text ``Fragment`` followed by ``Attachment`` objects
+    for each image extracted from the PDF. The text includes placeholders such as
+    "See attached image 1" which match the ``source`` attribute of the
+    corresponding ``Attachment``.
 
     Argument is an arXiv ID (e.g., 2310.06825, hep-th/0101001)
     or an arXiv URL (e.g., https://arxiv.org/abs/2310.06825).
@@ -61,10 +63,10 @@ def arxiv_loader(argument: str) -> List[llm.Fragment]:
         paper = results[0]
         paper_source_url = paper.entry_id
         
-        # Store image fragments separately first
-        image_fragments = [] 
-        full_text_parts = [] # Collect text parts page by page
-
+        # Store attachments separately first
+        image_attachments = []
+        full_text_parts = []  # Collect text parts page by page
+        attachment_counter = 1
         with tempfile.TemporaryDirectory() as temp_dir:
             pdf_path = paper.download_pdf(dirpath=temp_dir)
             try:
@@ -84,22 +86,13 @@ def arxiv_loader(argument: str) -> List[llm.Fragment]:
                         except Exception:
                             # Ignore images that cannot be extracted
                             continue 
-                        image_bytes = base_image["image"]
-                        image_ext = base_image["ext"]
-                        img_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                        
-                        # Generate source URL for both placeholder and fragment
-                        img_source = f"{paper_source_url}/page_{page_num + 1}_img_{img_index + 1}.{image_ext}"
-                        
-                        # Add placeholder to list for this page
-                        page_image_placeholders.append(f"\n[IMAGE: {img_source}]\n")
-                        
-                        # Add image fragment to the main list
-                        image_fragments.append(llm.Fragment(img_base64, source=img_source))
-                    
-                    # 3. Append placeholders to the text collected for this page
-                    if page_image_placeholders:
-                        full_text_parts.append("".join(page_image_placeholders))
+                        img_base64 = base64.b64encode(image_bytes).decode("utf-8")
+                        placeholder = f"See attached image {attachment_counter}"
+                        full_text_parts.append(f"\n{placeholder}\n")
+                        image_attachments.append(
+                            llm.Attachment(img_base64, source=placeholder)
+                        )
+                        attachment_counter += 1
                         
                 doc.close()
             except Exception as e:
@@ -111,7 +104,7 @@ def arxiv_loader(argument: str) -> List[llm.Fragment]:
         full_text = "".join(full_text_parts)
         
         # Create final list of fragments
-        fragments = [llm.Fragment(full_text, source=paper_source_url)] + image_fragments
+        fragments = [llm.Fragment(full_text, source=paper_source_url)] + image_attachments
         return fragments
 
     except UnexpectedEmptyPageError as e:
