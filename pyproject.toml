@@ -30,5 +30,5 @@ arxiv = "llm_arxiv"
 [project.optional-dependencies]
 test = ["pytest"]
 
-[tool.options]
-py_modules = ["llm_arxiv"]
+[tool.setuptools]
+py-modules = ["llm_arxiv"]

@@ -10,7 +10,10 @@ class UnexpectedEmptyPageError(Exception):
     pass
 
 class Result:
-    pass
+    def download_pdf(self, dirpath=None):
+        return ""
+
+    entry_id = ""
 
 class Search:
     def __init__(self, id_list=None, max_results=None):

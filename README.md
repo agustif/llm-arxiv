@@ -50,3 +50,7 @@ To run the tests:
 ```bash
 pytest
 ```
+
+## AI Agent Guidance
+
+For AI agents or assistants working on this codebase, please refer to the [AGENTS.md](AGENTS.md) file for specific instructions, codebase details, and development guidelines.

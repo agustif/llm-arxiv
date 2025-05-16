@@ -4,10 +4,14 @@ class Fragment(str):
         obj.source = source
         return obj
 
+class Attachment(Fragment):
+    pass
+
 def hookimpl(func=None, **kwargs):
     # Decorator that returns the function unchanged
     if func is None:
         def wrapper(f):
             return f
         return wrapper
+
     return func
