@@ -1,12 +1,12 @@
 [project]
 name = "llm-arxiv"
+requires-python = ">=3.10"
 version = "0.1.2"
 description = "LLM plugin for loading arXiv papers"
 readme = "README.md"
 authors = [{name = "Agusti F."}]
 license = {text = "Apache-2.0"}
 classifiers = [
-    "License :: OSI Approved :: Apache Software License"
 ]
 dependencies = [
     "llm",
@@ -29,3 +29,6 @@ arxiv = "llm_arxiv"
 
 [project.optional-dependencies]
 test = ["pytest"]
+
+[tool.options]
+py_modules = ["llm_arxiv"]
