@@ -173,7 +173,23 @@ def _process_arxiv_paper(
 
                             try:
                                 img = Image.open(io.BytesIO(image_bytes))
+                                # Ensure a common mode BEFORE load() and resize()
+                                if img.mode == 'P':
+                                    img = img.convert('RGBA' if img.info.get('transparency') is not None else 'RGB')
+                                elif img.mode not in ['RGB', 'RGBA', 'L', 'LA']:
+                                    # For CMYK, YCbCr, or other complex modes, convert to RGBA early
+                                    img = img.convert('RGBA')
                                 
+                                img.load() # Force loading of image data
+
+                                # More detailed logging before the check
+                                print(f"Debug: Image {img_idx_on_page} (global {global_image_document_idx_counter}) on page {page_num + 1}: Original PDF ext: {original_ext_from_pdf}, Pillow mode: {img.mode}, Pillow w: {img.width}, h: {img.height}", file=sys.stderr)
+
+                                # Check for zero dimensions immediately after opening
+                                if img.width <= 0 or img.height <= 0:
+                                    print(f"Warning: Image {img_idx_on_page} (global {global_image_document_idx_counter}) on page {page_num + 1} has zero or negative dimensions (w={img.width}, h={img.height}) after opening. Skipping.", file=sys.stderr)
+                                    continue # Skip to the next image
+
                                 perform_resize = False
                                 max_dim_to_use = 512 # Default for when resize_option is True
 
@@ -188,23 +204,42 @@ def _process_arxiv_paper(
                                     if img.width > max_dim_to_use or img.height > max_dim_to_use:
                                         if img.width > img.height:
                                             new_width = max_dim_to_use
-                                            new_height = int(max_dim_to_use * img.height / img.width)
+                                            new_height = max(1, int(max_dim_to_use * img.height / img.width))
                                         else:
                                             new_height = max_dim_to_use
-                                            new_width = int(max_dim_to_use * img.width / img.height)
-                                        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                                            new_width = max(1, int(max_dim_to_use * img.width / img.height))
+                                        img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
+                                        print(f"Debug: Image *after* resize: Mode: {img.mode}, Size: {img.size}, Info: {img.info}", file=sys.stderr)
+                                        # Explicitly convert after resize to ensure a common mode
+                                        if img.mode == 'P':
+                                            img = img.convert('RGBA' if img.info.get('transparency') is not None else 'RGB')
+                                        elif img.mode not in ['RGB', 'RGBA', 'L', 'LA']:
+                                            img = img.convert('RGBA') # Default to RGBA if not a simple mode
                                 
                                 output_buffer = io.BytesIO()
                                 processed_image_final_ext = None
 
                                 if pillow_input_ext_guess in ["jpeg", "jpg"]:
-                                    if img.mode not in ['RGB', 'L']: img = img.convert('RGB')
+                                    if img.mode not in ['RGB', 'L']: # If not RGB or Grayscale
+                                        img = img.convert('RGB') # Convert to RGB (strips alpha if any)
                                     img.save(output_buffer, format="JPEG", quality=70, optimize=True) 
                                     processed_image_final_ext = "jpeg"
                                 else: 
-                                    if img.mode in ['CMYK', 'YCbCr']: img = img.convert('RGB')
-                                    elif img.mode == 'P': img = img.convert('RGBA' if 'transparency' in img.info else 'RGB')
-                                    img.save(output_buffer, format="PNG", optimize=True)
+                                    # Default to PNG for non-JPEG originals
+                                    # Ensure mode is suitable for PNG saving (L, LA, RGB, RGBA)
+                                    if img.mode == 'P': # Palette
+                                        # Convert to RGBA if transparency is present, else RGB
+                                        img = img.convert('RGBA' if img.info.get('transparency') is not None else 'RGB')
+                                    elif img.mode in ['CMYK', 'YCbCr']:
+                                        img = img.convert('RGBA') # Convert to RGBA for broader compatibility
+                                    elif img.mode not in ['L', 'LA', 'RGB', 'RGBA']:
+                                        # For other unhandled modes (e.g., 'F', '1'), attempt conversion to RGBA
+                                        # This is a fallback; specific handling might be better if such modes are common
+                                        print(f"Warning: Image {img_idx_on_page} (global {global_image_document_idx_counter}) on page {page_num + 1} has unusual mode {img.mode}, converting to RGBA for PNG saving.", file=sys.stderr)
+                                        img = img.convert('RGBA')
+                                    
+                                    # At this point, img.mode should be L, LA, RGB, or RGBA, all saveable as PNG
+                                    img.save(output_buffer, format="PNG") # Temporarily remove optimize=True
                                     processed_image_final_ext = "png"
                                 
                                 processed_image_bytes = output_buffer.getvalue()
@@ -300,6 +335,8 @@ def arxiv_loader(argument: str) -> List[Union[llm.Fragment, llm.Attachment]]:
     
     image_criteria_loader: Optional[ImageSelectionCriteria] = None
     try:
+        # DEBUG PRINT for chosen_raw_value_for_images
+        print(f"Debug arxiv_loader: chosen_raw_value_for_images = {repr(chosen_raw_value_for_images)}", file=sys.stderr)
         image_criteria_loader = parse_image_selection_spec(chosen_raw_value_for_images)
     except ValueError as e:
         raise ValueError(f"Invalid image selection option in fragment ('{chosen_raw_value_for_images}'): {e}") from e

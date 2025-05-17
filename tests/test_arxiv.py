@@ -50,8 +50,8 @@ def test_extract_arxiv_id(argument, expected_id):
 
 @patch("llm_arxiv.fitz.open")
 @patch("llm_arxiv.arxiv.Search")
-@patch("PIL.Image.open")
-def test_arxiv_loader_success(mock_pil_image_open, mock_search_class, mock_fitz_open):
+@patch("llm_arxiv.Image.open")
+def test_arxiv_loader_success(mock_llm_image_open, mock_search_class, mock_fitz_open):
     # --- Mock arXiv Search and Result ---
     mock_search_instance = MagicMock()
     mock_paper = MagicMock(spec=arxiv.Result)
@@ -78,11 +78,11 @@ def test_arxiv_loader_success(mock_pil_image_open, mock_search_class, mock_fitz_
     mock_pil_image.height = 100
     mock_pil_image.mode = 'RGB' # ensure mode is set
     # Define a side effect for save to simulate writing to BytesIO
-    def mock_save(buffer, format, **kwargs):
+    def mock_save(buffer, format, optimize=None, quality=None, **kwargs):
         buffer.write(b"processed_fake_image_bytes")
         return None
     mock_pil_image.save = mock_save
-    mock_pil_image_open.return_value = mock_pil_image
+    mock_llm_image_open.return_value = mock_pil_image
 
     mock_doc.__enter__.return_value = mock_doc
     
@@ -143,8 +143,8 @@ def test_arxiv_loader_success(mock_pil_image_open, mock_search_class, mock_fitz_
     # Ensure doc.extract_image was called for the image on page 1
     mock_doc.extract_image.assert_called_once_with(10)
     # Ensure Pillow was involved
-    mock_pil_image_open.assert_called_once()
-    actual_call_args = mock_pil_image_open.call_args[0]
+    mock_llm_image_open.assert_called_once()
+    actual_call_args = mock_llm_image_open.call_args[0]
     assert isinstance(actual_call_args[0], io.BytesIO)
     assert actual_call_args[0].getvalue() == b"fake_image_bytes_for_10"
     
