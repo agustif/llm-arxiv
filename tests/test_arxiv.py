@@ -409,6 +409,45 @@ def test_process_arxiv_paper_image_selection_global(mock_fitz_open, mock_search_
     mock_image_open.call_count == 2 # Pillow should be called for each selected image
 
 
+@patch("llm_arxiv.Image.open")
+@patch("llm_arxiv.arxiv.Search")
+@patch("llm_arxiv.fitz.open")
+def test_process_arxiv_paper_resize(mock_fitz_open, mock_search_class, mock_image_open):
+    mock_search_instance = MagicMock()
+    mock_paper = MagicMock(spec=arxiv.Result)
+    mock_paper.entry_id = "http://arxiv.org/abs/9999.9999v1"
+    mock_paper.download_pdf.return_value = "/tmp/9999.9999.pdf"
+    mock_search_instance.results.return_value = iter([mock_paper])
+    mock_search_class.return_value = mock_search_instance
+
+    mock_doc = MagicMock()
+    mock_page = MagicMock()
+    mock_page.get_text.return_value = "Page text <img src='p1i1'>"
+    mock_page.get_images.return_value = [(42,)]
+    mock_doc.__iter__.return_value = iter([mock_page])
+    mock_doc.extract_image.return_value = {"image": b"img_bytes", "ext": "png"}
+    mock_doc.__enter__.return_value = mock_doc
+    mock_doc.__exit__.return_value = None
+    mock_fitz_open.return_value = mock_doc
+
+    mock_pil_image = MagicMock()
+    mock_pil_image.width = 1500
+    mock_pil_image.height = 500
+    mock_pil_image.mode = "RGB"
+    mock_image_open.return_value = mock_pil_image
+
+    markdown_text, attachments, _ = _process_arxiv_paper(
+        "9999.9999",
+        image_selection_criteria={"mode": "all"},
+        resize_option=True,
+    )
+
+    mock_pil_image.resize.assert_called_once()
+    args, kwargs = mock_pil_image.resize.call_args
+    assert args[0][0] == 512
+    assert args[0][1] > 1
+
+
 # --- Tests for CLI Commands --- pytest.py tests/test_arxiv.py
 
 # Helper to invoke LLM CLI commands
