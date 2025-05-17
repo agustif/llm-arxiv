@@ -11,12 +11,18 @@ classifiers = [
 dependencies = [
     "llm",
     "arxiv",
-    "PyMuPDF"
+    "PyMuPDF",
+    "markdownify",
+    "Pillow",
+    "click>=8.0"
 ]
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["llm_arxiv"]
 
 [project.urls]
 Homepage = "https://github.com/agustif/llm-arxiv"
@@ -29,6 +35,3 @@ arxiv = "llm_arxiv"
 
 [project.optional-dependencies]
 test = ["pytest"]
-
-[tool.setuptools]
-py-modules = ["llm_arxiv"]
