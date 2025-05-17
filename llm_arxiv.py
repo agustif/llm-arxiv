@@ -202,14 +202,35 @@ def _process_arxiv_paper(
                                 
                                 if perform_resize:
                                     if img.width > max_dim_to_use or img.height > max_dim_to_use:
+                                        print(
+                                            f"Debug BEFORE resize calc: orig_w={img.width}, orig_h={img.height}, max_dim={max_dim_to_use}",
+                                            file=sys.stderr,
+                                        )
                                         if img.width > img.height:
+                                            value_before_int = max_dim_to_use * img.height / img.width
+                                            print(
+                                                f"Debug calc: {max_dim_to_use} * {img.height} / {img.width} = {value_before_int}",
+                                                file=sys.stderr,
+                                            )
                                             new_width = max_dim_to_use
-                                            new_height = max(1, int(max_dim_to_use * img.height / img.width))
+                                            new_height = max(1, int(round(value_before_int)))
                                         else:
+                                            value_before_int = max_dim_to_use * img.width / img.height
+                                            print(
+                                                f"Debug calc: {max_dim_to_use} * {img.width} / {img.height} = {value_before_int}",
+                                                file=sys.stderr,
+                                            )
                                             new_height = max_dim_to_use
-                                            new_width = max(1, int(max_dim_to_use * img.width / img.height))
+                                            new_width = max(1, int(round(value_before_int)))
+                                        print(
+                                            f"Debug computed new_size: {new_width}x{new_height}",
+                                            file=sys.stderr,
+                                        )
                                         img = img.resize((new_width, new_height), Image.Resampling.BILINEAR)
-                                        print(f"Debug: Image *after* resize: Mode: {img.mode}, Size: {img.size}, Info: {img.info}", file=sys.stderr)
+                                        print(
+                                            f"Debug: Image *after* resize: Mode: {img.mode}, Size: {img.size}, Info: {img.info}",
+                                            file=sys.stderr,
+                                        )
                                         # Explicitly convert after resize to ensure a common mode
                                         if img.mode == 'P':
                                             img = img.convert('RGBA' if img.info.get('transparency') is not None else 'RGB')
@@ -625,11 +646,11 @@ def register_commands(cli):
                     categories_str = ", ".join(paper.categories)
                     click.echo(f"    Primary Category: {primary_category if primary_category else 'N/A'}")
                     click.echo(f"    Categories: {categories_str if categories_str else 'N/A'}")
-                    click.echo(f"    Abstract: {paper.summary.replace('\n', ' ')}")
+                    click.echo("    Abstract: " + paper.summary.replace("\n", " "))
                     click.echo(f"    PDF Link: {paper.pdf_url}")
                 else:
                     brief_summary = (paper.summary[:200] + '...') if len(paper.summary) > 200 else paper.summary
-                    click.echo(f"    Abstract (brief): {brief_summary.replace('\n', ' ')}")
+                    click.echo("    Abstract (brief): " + brief_summary.replace("\n", " "))
                 click.echo("---")
             
             # After the loop, if there are commands, try to copy them all
